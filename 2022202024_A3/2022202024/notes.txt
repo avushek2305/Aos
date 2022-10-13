@@ -1,0 +1,4 @@
+for sending data of one file to another change input file to ios::in | ios::binary and output file to ios::out | ios::trunc | ios::binary
+------------------------------------------------------/\----------------------------------------------------------------------------------
+client me send aur recieve dono kliye general_socket_descriptor hi use krna he aur tracker me new_socket_descriptor joki connection establish hone k bad bna h;
+------------------------------------------------------/\----------------------------------------------------------------------------------
