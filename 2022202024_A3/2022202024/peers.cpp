@@ -81,13 +81,7 @@ class Client_socket{
              printf("%s\n", buffer);
              
         }
-        void accept_connection(){
-            if ((new_socket_descriptor = accept(general_socket_descriptor, (struct sockaddr *)&address, (socklen_t*)&address_length))<0) { 
-                perror("[ERROR] : Accept");
-                exit(EXIT_FAILURE);
-            }
-            cout<<"[LOG] : Connected to Client.\n";
-        }
+        
        
         void transmit_file(){
             char buffer[256];

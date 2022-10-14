@@ -239,8 +239,8 @@ class Client_socket{
         }
     
 
-        void transmit_msg(){
-            send(general_socket_descriptor , MSG.c_str() , MSG.length() , 0);
+        void transmit_msg(string res){
+            send(general_socket_descriptor , res.c_str() , res.length() , 0);
             printf("message sent\n");
         }
     
@@ -272,17 +272,117 @@ class Client_socket{
         perror("could not create thread");
         return 1;
     }
-    cout<<"yha phuch"<<endl;
+    
  
-   string mainmsg;
+   string ops;
  while(1)
    { 
     
-    cin>>mainmsg;
-    S.setMsg(mainmsg);
-    
-    S.transmit_msg();
+     cout<<"$|> ";
+    cin>>ops;
+
+    if(ops == "login"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/" + pword;
+        S.transmit_msg(to_send);
+        S.read_msg();
+        cout<<ops<<endl;
+    }
+    if(ops == "create_user"){
+        string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        S.read_msg();
+        cout<<ops<<endl;
+    }
+    if(ops == "create_group"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+
+        cout<<ops<<endl;
+    }
+    if(ops == "join_group"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "leave_group"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "list_requests"){
+       string usrName, pword;
+        cin>>usrName, pword;
+        string to_send = ops + "/" + usrName + "/";
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "accept_request"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "list_groups"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "list_files"){
+       string usrName, pword;
+        cin>>usrName, pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "upload_file"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "download_file"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/";
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "logout"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/";
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "show_downloads"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
+    if(ops == "stop_share"){
+       string usrName, pword;
+        cin>>usrName>>pword;
+        string to_send = ops + "/" + usrName + "/"+ pword;
+        S.transmit_msg(to_send);
+        cout<<ops<<endl;
+    }
    
-    S.read_msg();}
-    return 0;
+   }
+
 }

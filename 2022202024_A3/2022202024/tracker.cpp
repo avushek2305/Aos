@@ -1,4 +1,5 @@
 #include<iostream>
+#include <bits/stdc++.h>
 #include<fstream>
 #include<stdio.h>
 #include <unistd.h>
@@ -21,6 +22,9 @@ fstream file;
     char buffer[1024] = { 0 };
     string filename = "../Data/2.png";
     string msg;
+    map<int,vector<string>> UserData;
+    map<string,string> Authenticate;
+    int UserId = 0;
 
 void setMsg(string s){
     msg = s;
@@ -56,8 +60,9 @@ void create_socket(){
                 perror("[ERROR] : Accept");
                 exit(EXIT_FAILURE);
             }
-            return new_socket_descriptor;;
+            
             cout<<"[LOG] : Connected to Client.\n";
+            return new_socket_descriptor;
         }
 
         void transmit_file(int new_socket_descriptor){
@@ -92,21 +97,72 @@ void create_socket(){
             fclose(fd);
             cout<<"[LOG] : File Saved.\n";
         }
-        void read_msg(int new_socket_descriptor){
-           
+        string read_msg(int new_socket_descriptor){
+            char buffer[1024] = { 0 };
             int valread = read(new_socket_descriptor, buffer, 1024);
-             printf("%s\n", buffer);
+            return buffer;
            
         }
+        vector<string> splitstring(string str,char delim)
+            {
+                std::vector<string> vec;
+                int i=0;
+                string s="";
+                while(i<str.length())
+                {
+                    if(str[i]==delim)
+                    {
+                        vec.push_back(s);
+                        s="";
+                        i++;
+                    }
+                    else
+                    {
+                        s=s+str[i];
+                        i++;
+                    }
+                }
+                vec.push_back(s);
+                return vec;
+            }
+
         void *threads_code(void* n_s_d){
             int new_socket_descriptor = *(int *)n_s_d;
             while(1)
-             {
-                read_msg(new_socket_descriptor);
+             {  vector<string> task;
+                string message = read_msg(new_socket_descriptor);
+                
+                task = splitstring(message,'/');
+                for(auto i: task){
+                    cout<<i<<" ";
+                }
+                if(task[0] == "create_user"){
+                    if(task.size() != 3)
+                    setMsg("1");
+                    else{
+                        UserData[UserId++].push_back(task[1]);
+                        UserData[UserId++].push_back(task[2]);
+                        Authenticate[task[1]] = task[2];
+                        setMsg("0");
+                    }
 
-                setMsg("msg is being sent by us !");
+                }
+                else if(task[0] == "login"){
+                    if(task.size() != 3)
+                    setMsg("1");
+                    else if(Authenticate[task[1]] == task[2]){
+                        setMsg("0");
+                    }
+                    else{
+                        setMsg("1");
+                    }
+
+                }
+                
                 transmit_msg(new_socket_descriptor);
                 }
+               
+                
         }
 void *Server_code(void* port){
     create_socket();
@@ -124,131 +180,20 @@ void *Server_code(void* port){
                 int new_socket_descriptor = accept_connection();
 
                 pthread_t c;
-                pthread_attr_t t_attr2;
-                int res2 = pthread_attr_init(&t_attr2);
-                if (res2 != 0) {
-                    perror("Attribute creation failed");
-                    exit(EXIT_FAILURE);
-                }
+                
                 
 
-                if( pthread_create( &c ,&t_attr2 ,  threads_code , (void*)&new_socket_descriptor) < 0)
+                if( pthread_create( &c ,0 ,  threads_code , (void*)&new_socket_descriptor) < 0)
                 {
                     perror("could not create thread");
                     
                 }
-               
+            
             }
 
 
 }
 
-
-class Client_socket{
-    fstream file;
-
-    int PORT;
-    
-    int general_socket_descriptor;
-    int new_socket_descriptor;
-    struct sockaddr_in address;
-    int address_length;
-    string msg;
-    string filename = "../Data/out1.png";
-    char buffer[1024] = { 0 };
-    public:
-    Client_socket(int port){
-            create_socket();
-            PORT = port;
-
-            address.sin_family = AF_INET;
-            address.sin_port = htons( PORT );
-            address_length = sizeof(address);
-            if(inet_pton(AF_INET, "127.0.0.1", &address.sin_addr)<=0) { 
-                cout<<"[ERROR] : Invalid address\n";
-            }
-
-            create_connection();
-            
-           
-        }
-
-        void setMsg(string s){
-        msg = s;
-    }
-
-        
-
-        void create_socket(){
-            if ((general_socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
-                perror("[ERROR] : Socket failed.\n");
-                exit(EXIT_FAILURE);
-            }
-            cout<<"[LOG] : Socket Created Successfully.\n";
-        }
-
-        void create_connection(){
-            if (connect(general_socket_descriptor, (struct sockaddr *)&address, sizeof(address)) < 0) { 
-                perror("[ERROR] : connection attempt failed.\n");
-                exit(EXIT_FAILURE);
-            }
-            cout<<"[LOG] : Connection Successfull.\n";
-        }
-
-        void receive_file(){
-            size_t datasize = 1;
-            char text[256];
-            FILE* fd = fopen(filename.c_str(), "wb");
-            while (datasize > 0)
-            {
-                datasize = recv(general_socket_descriptor, text, sizeof(text), 0);
-                fwrite(&text, 1, datasize, fd);
-            }
-            fclose(fd);
-            cout<<"[LOG] : File Saved.\n";}
-        
-
-        void read_msg(){
-            while(true)
-            {
-            int valread = read(general_socket_descriptor, buffer, 1024);
-             printf("%s\n", buffer);
-             if(valread <= 0){
-                break;
-             }
-             }
-        }
-        void accept_connection(){
-            if ((new_socket_descriptor = accept(general_socket_descriptor, (struct sockaddr *)&address, (socklen_t*)&address_length))<0) { 
-                perror("[ERROR] : Accept");
-                exit(EXIT_FAILURE);
-            }
-            cout<<"[LOG] : Connected to Client.\n";
-        }
-       
-        void transmit_file(){
-            char buffer[256];
-            FILE *fd = fopen(filename.c_str(), "rb");
-            size_t rret, wret;
-            int bytes_read;
-            while (!feof(fd)) {
-                if ((bytes_read = fread(&buffer, 1, sizeof(buffer), fd)) > 0)
-                    send(general_socket_descriptor, buffer, bytes_read, 0);
-                else
-                    break;
-            }
-                fclose(fd);
-        }
-    
-
-        void transmit_msg(){
-            send(general_socket_descriptor , msg.c_str() , msg.length() , 0);
-            printf("message sent\n");
-        }
-    
-    
-    
-    };
 
 
 
@@ -273,13 +218,13 @@ class Client_socket{
         perror("could not create thread");
         return 1;
     }
-    cout<<"yha phuch"<<endl;
-   string c ;
-while(1)
-{cout<<"enter c:"<<endl;
-cin>>c;
-if(c=="quit")
-break;
-}
-    return 0;
+            cout<<"yha phuch"<<endl;
+        string c ;
+        while(1)
+        {cout<<"enter c:"<<endl;
+        cin>>c;
+        if(c=="quit")
+        break;
+        }
+            return 0;
 }
