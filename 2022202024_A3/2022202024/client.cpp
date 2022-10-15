@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <bits/stdc++.h>
 
 using namespace std;
 fstream file;
@@ -210,10 +211,10 @@ class Client_socket{
             cout<<"[LOG] : File Saved.\n";}
         
 
-        void read_msg(){
-           
+        string read_msg(){
+            char buffer[1024] = { 0 };
             int valread = read(general_socket_descriptor, buffer, 1024);
-             printf("%s\n", buffer);
+             return buffer;
            
         }
         void accept_connection(){
@@ -254,9 +255,11 @@ class Client_socket{
 
     int main(){
     cout<<"Enter your port no.: ";
-    int curr_port,talk_port;
+    int port,talk_port;
+    string curr_port = to_string(port);
     cin>>curr_port>>talk_port;
-     Client_socket S(talk_port); 
+    Client_socket S(talk_port); 
+    map<string,vector<string>> GidTofiles;
 
     pthread_t x;
     pthread_attr_t thread_attr2;
@@ -267,92 +270,118 @@ class Client_socket{
     }
     
 
-    if( pthread_create( &x , NULL ,  Server_code , (void*)&curr_port) < 0)
+    if( pthread_create( &x , NULL ,  Server_code , (void*)&port) < 0)
     {
         perror("could not create thread");
-        return 1;
+        // return 1;
     }
     
  
    string ops;
+   string flag;
+   string usrName, pword,messg;
+   bool cu = 1;
+   bool lu = 1;
  while(1)
    { 
     
      cout<<"$|> ";
     cin>>ops;
+    
 
-    if(ops == "login"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/" + pword;
+    if(ops == "login" && lu){
+       
+       string usrN, pw,messg;
+        cin>>usrN>>pw;
+        string to_send = ops + "/" + usrN + "/"+ pw + "/" + curr_port ;
         S.transmit_msg(to_send);
-        S.read_msg();
+        flag = S.read_msg();
+        if(flag == "0"){
+            usrName = usrN;
+            lu = 0;
+        }
+        cout<<flag<<endl;
+    }
+    if(lu == 1){
+         cout<<"[ERROR] : login required!"<<endl;
+    }
+    if(ops == "create_user" && cu){
+        string usrN, pw,messg;
+        cin>>usrN>>pw;
+        string to_send = ops + "/" + usrN + "/"+ pw;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        if(messg == "0"){
+            cu = 0;
+        }
+        cout<<messg<<endl;
+    }
+    if(ops == "create_group" && flag == "0" ){
+        string gID,messg;
+        cin>>gID;
+        string to_send = ops + "/" + gID +"/"+ usrName ;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        cout<<messg<<endl;
+    }
+    if(ops == "join_group" && flag == "0" ){
+       string gID,messg;
+        cin>>gID;
+        string to_send = ops + "/" + gID +"/"+ usrName ;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        cout<<messg<<endl;
+    }
+    if(ops == "leave_group" && flag == "0" ){
+       string gID,messg;
+        cin>>gID;
+        string to_send = ops + "/" + gID +"/"+ usrName ;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        cout<<messg<<endl;
+    }
+    if(ops == "list_requests" && flag == "0" ){
+       string gID,messg;
+        cin>>gID;
+        string to_send = ops + "/" + gID ;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        cout<<messg<<endl;
+    }
+    if(ops == "accept_request" && flag == "0" ){
+        string gID,messg,uid;
+        cin>>gID>>uid;
+        string to_send = ops + "/" + gID + "/" + uid + "/" + usrName;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
+        cout<<messg<<endl;
+    }
+    if(ops == "list_groups" && flag == "0"){
+       
+        string to_send = ops ,messg;
+        S.transmit_msg(to_send);
+        messg = S.read_msg();
         cout<<ops<<endl;
     }
-    if(ops == "create_user"){
-        string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
+    if(ops == "list_files" && flag == "0"){
+       string gid,messg;
+        cin>>gid;
+        string to_send = ops + "/" + gid + "/" + usrName;
         S.transmit_msg(to_send);
-        S.read_msg();
-        cout<<ops<<endl;
+        messg = S.read_msg();
+        cout<<messg<<endl;
     }
-    if(ops == "create_group"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
+    if(ops == "upload_file" && flag == "0"){
+       string filepath, gid;
+        cin>>filepath>>gid;
+        string to_send = ops +"/" + filepath + "/" + gid + "/"+ usrName;
         S.transmit_msg(to_send);
-
-        cout<<ops<<endl;
-    }
-    if(ops == "join_group"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "leave_group"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "list_requests"){
-       string usrName, pword;
-        cin>>usrName, pword;
-        string to_send = ops + "/" + usrName + "/";
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "accept_request"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "list_groups"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "list_files"){
-       string usrName, pword;
-        cin>>usrName, pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
-    }
-    if(ops == "upload_file"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/"+ pword;
-        S.transmit_msg(to_send);
-        cout<<ops<<endl;
+        messg = S.read_msg();
+        if(messg == "0"){
+            GidTofiles[gid].push_back(filepath);
+        }
+        
+        cout<<messg<<endl;
     }
     if(ops == "download_file"){
        string usrName, pword;
@@ -361,12 +390,14 @@ class Client_socket{
         S.transmit_msg(to_send);
         cout<<ops<<endl;
     }
-    if(ops == "logout"){
-       string usrName, pword;
-        cin>>usrName>>pword;
-        string to_send = ops + "/" + usrName + "/";
+    if(ops == "logout" && flag == "0"){
+        string to_send = ops + "/" + usrName;
         S.transmit_msg(to_send);
-        cout<<ops<<endl;
+        string messg = S.read_msg();
+        if(messg == "1")
+       {flag = "1";
+       lu = 1;}
+
     }
     if(ops == "show_downloads"){
        string usrName, pword;
@@ -381,6 +412,9 @@ class Client_socket{
         string to_send = ops + "/" + usrName + "/"+ pword;
         S.transmit_msg(to_send);
         cout<<ops<<endl;
+    }
+    if(flag != "0"){
+        cout<<"[ERROR] : login required!"<<endl;
     }
    
    }

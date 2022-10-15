@@ -10,6 +10,17 @@
 #include <pthread.h>
 
 using namespace std;
+
+struct file_data
+{
+	string clientid;
+    string filepath;
+	string hash;
+	string ip;
+	string port;
+	string gid;
+		
+};
 fstream file;
 
     int PORT;
@@ -22,8 +33,12 @@ fstream file;
     char buffer[1024] = { 0 };
     string filename = "../Data/2.png";
     string msg;
-    map<int,vector<string>> UserData;
     map<string,string> Authenticate;
+    map<string,string> GidToAdmin;
+    map<string,vector<string>> GidToUsers;
+    map<string,vector<string>> adminTOReq;
+    map<string,string> isLogin; 
+    map<string,vector<file_data>> GidToFile;
     int UserId = 0;
 
 void setMsg(string s){
@@ -79,6 +94,13 @@ void create_socket(){
                 fclose(fd);
         }
 
+        bool findin(vector<string> &arr, string x){
+            for(auto i: arr){
+                if(i==x)
+                return true;
+            }
+            return false;
+        }
 
         void transmit_msg(int new_socket_descriptor){
             send(new_socket_descriptor , msg.c_str() , msg.length() , 0);
@@ -97,10 +119,10 @@ void create_socket(){
             fclose(fd);
             cout<<"[LOG] : File Saved.\n";
         }
-        string read_msg(int new_socket_descriptor){
+        pair<string,int> read_msg(int new_socket_descriptor){
             char buffer[1024] = { 0 };
             int valread = read(new_socket_descriptor, buffer, 1024);
-            return buffer;
+            return {buffer,valread};
            
         }
         vector<string> splitstring(string str,char delim)
@@ -129,28 +151,39 @@ void create_socket(){
         void *threads_code(void* n_s_d){
             int new_socket_descriptor = *(int *)n_s_d;
             while(1)
-             {  vector<string> task;
-                string message = read_msg(new_socket_descriptor);
-                
+             {  
+                vector<string> task;
+                pair<string,int>  val = read_msg(new_socket_descriptor);
+                string message = val.first;
+                if(val.second <= 0 )
+                {break;}
                 task = splitstring(message,'/');
-                for(auto i: task){
-                    cout<<i<<" ";
-                }
-                if(task[0] == "create_user"){
+                
+                cout<<message;
+                if(task[0] == "create_user" ){
                     if(task.size() != 3)
-                    setMsg("1");
+                    setMsg("3");
                     else{
-                        UserData[UserId++].push_back(task[1]);
-                        UserData[UserId++].push_back(task[2]);
-                        Authenticate[task[1]] = task[2];
+                        
+                        if(Authenticate.find(task[1]) == Authenticate.end())
+                        {Authenticate[task[1]] = task[2];
+
                         setMsg("0");
+                        }
+                        else
+                        {setMsg("1");}
                     }
 
                 }
-                else if(task[0] == "login"){
-                    if(task.size() != 3)
-                    setMsg("1");
-                    else if(Authenticate[task[1]] == task[2]){
+                else if(task[0] == "login" ){
+                    if(task.size() != 4   )
+                    setMsg("3");
+                    else if(Authenticate.find(task[1]) == Authenticate.end() ){
+                        
+                        setMsg("2");
+                    }
+                    else if(Authenticate[task[1]] == task[2] && isLogin.find(task[1]) == isLogin.end()){
+                        isLogin[task[1]] = task[3];
                         setMsg("0");
                     }
                     else{
@@ -158,9 +191,143 @@ void create_socket(){
                     }
 
                 }
-                
-                transmit_msg(new_socket_descriptor);
+                else if(task[0] == "create_group"){
+                    if(task.size() != 3)
+                    setMsg("3");
+                    else if(GidToAdmin.find(task[1]) == GidToAdmin.end()){
+                            GidToAdmin[task[1]] = task[2];
+                            GidToUsers[task[1]].push_back(task[2]);
+                            adminTOReq.insert({task[1],{}});
+                            setMsg("0");
+                    }
+                    else{
+                        setMsg("1");
+                    } 
+
                 }
+
+                else if(task[0] == "join_group"){
+                    if(task.size() != 3)
+                    setMsg("3");
+                    else if(GidToAdmin.find(task[1]) != GidToAdmin.end() && task[2] != GidToAdmin[task[1]] && findin(adminTOReq[task[1]], task[2]) == false ){
+                            adminTOReq[task[1]].push_back(task[2]);
+                            setMsg("0");
+                    }
+                    else{
+                        setMsg("1");
+                    }
+
+                }
+
+                else if(task[0] == "leave_group"){
+                    if(task.size() != 3)
+                    setMsg("3");
+                    else if(GidToAdmin.find(task[1]) != GidToAdmin.end()){
+                            if(GidToAdmin[task[1]] == task[2]){
+                                setMsg("4"); // admin assign
+                                }
+                                
+                            
+                            else if(findin(GidToUsers[task[1]],task[2]) != 0 )
+                           { remove(GidToUsers[task[1]].begin(),GidToUsers[task[1]].end(),task[2]);
+                           GidToUsers[task[1]].pop_back();
+                            setMsg("0");}
+                            else{
+                                 setMsg("5");
+                            }
+                    }
+                    else{
+                        setMsg("1");
+                    }
+                }
+
+                else if(task[0]=="accept_request"){
+                    if(task.size() != 4)
+                    setMsg("3");
+                    else if(GidToAdmin.find(task[1]) != GidToAdmin.end() && GidToAdmin[task[1]] == task[3]){
+                            if(findin(adminTOReq[task[1]], task[2])){
+                                remove(adminTOReq[task[1]].begin(),adminTOReq[task[1]].end(),task[2]); 
+                                adminTOReq[task[1]].pop_back();
+                                GidToUsers[task[1]].push_back(task[2]);
+                            setMsg("0");
+                            }
+                            else{
+                                setMsg("2");
+                            }
+                            
+
+
+                    }
+                    else
+                    {setMsg("1");}
+                }
+                else if(task[0] == "list_requests"){
+                    if(task.size() != 2){
+                        setMsg("3");
+                    }
+                    else if(GidToAdmin.find(task[1]) != GidToAdmin.end()){
+                        cout<<"size :"<<adminTOReq[task[1]].size();
+                        for(auto i: adminTOReq[task[1]]){
+                            cout<<i<<" ";
+                        
+                        }
+                        cout<<endl;
+                        setMsg("0");
+                    }
+                }
+                else if(task[0] == "list_groups"){
+                    for(auto i : GidToAdmin){
+                        cout<<i.first<<" ";
+                    }
+                    cout<<endl;
+                        setMsg("0");
+                }
+                else if(task[0] == "logout"){
+                    
+                                isLogin.erase(task[1]);
+                                setMsg("1");
+                }
+
+                else if(task[0] == "upload_file"){
+                    if(isLogin.find(task[3]) != isLogin.end()){
+                        if(findin(GidToUsers[task[2]],task[3]) != false){
+                            file_data f_data;
+                            f_data.filepath = task[1];
+                            f_data.clientid = task[3];
+                            f_data.gid =task[2];
+                            f_data.port = isLogin[task[3]]; 
+                            GidToFile[task[2]].push_back(f_data); 
+                            setMsg("0");
+                        }
+                        else{
+                            setMsg("2");
+                        }
+                    }
+                    else{
+                        setMsg("1");
+                    }
+                }
+                else if(task[0] == "list_files"){
+                    if(findin(GidToUsers[task[1]],task[3]) != false){
+                            vector<file_data> temp= GidToFile[task[1]];
+                            for(file_data i: temp){
+                                cout<<i.filepath<<" ";
+                            }
+                            setMsg("0");
+                        }
+                        else{
+                            setMsg("2");
+                        }
+
+
+                }
+                else{
+                    setMsg("Bakwass Hai Ye");
+                }
+
+                transmit_msg(new_socket_descriptor);
+             }
+             
                
                 
         }
@@ -216,7 +383,7 @@ void *Server_code(void* port){
     if( pthread_create( &S , NULL ,  Server_code , (void*)&curr_port) < 0)
     {
         perror("could not create thread");
-        return 1;
+        // return 1;
     }
             cout<<"yha phuch"<<endl;
         string c ;
